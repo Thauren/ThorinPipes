@@ -6,32 +6,27 @@ import feedparser
 import datetime
 import PyRSS2Gen
 import time
+import re
+import config
 
-def cinema_filter(arg):
-    return ((arg.find('2015') != -1 or arg.find('2014') != -1) 
-        and ((arg.find('HD') != -1) or (arg.find('1080') != -1) or (arg.find('720') != -1)))                
-
-def humor_filter(arg):
-    return (((arg.find('HD') != -1) or (arg.find('1080') != -1) or (arg.find('720') != -1))
-        and ((arg.find(u'КВН') != -1) or (arg.find(u'Уральские пельмени') != -1)))                
-
-config = [
-            ('http://alt.rutor.org/rss.php?category=1', cinema_filter, 'зарубежные'),
-            ('http://alt.rutor.org/rss.php?category=5', cinema_filter, 'наши'),
-            ('http://alt.rutor.org/rss.php?category=7', cinema_filter, 'мультики'),
-            ('http://alt.rutor.org/rss.php?category=15', humor_filter, 'юмор')
-        ]
+def filter_re(arg, text):
+    result = True
+    for f in arg:
+        if f.search(text) == None:
+            result = False
+    return result
 
 class HttpProcessor(BaseHTTPRequestHandler):
 
     def do_GET(self):
+        start_time = time.time()
         self.send_response(200)
         self.send_header('content-type','text/rss+xml')
         self.end_headers()
 
         if self.path == '/rss':
             items = []
-            for url, filt, name in config:
+            for url, filt, name in config.config:
                 d = feedparser.parse(url)
                 group = [PyRSS2Gen.RSSItem(
                     title = x.title,
@@ -39,7 +34,7 @@ class HttpProcessor(BaseHTTPRequestHandler):
                     description = x.summary,
                     guid = x.link,
                     pubDate = datetime.datetime.utcfromtimestamp(time.mktime(x.published_parsed)))
-                    for x in d.entries if filt(x.title)]
+                    for x in d.entries if filter_re(filt, x.title)]
                 print name + ' generate ' + str(len(group)) + ' elements'
                 items = items + group
 
@@ -52,7 +47,9 @@ class HttpProcessor(BaseHTTPRequestHandler):
                 items = items)
             rss.write_xml(self.wfile)
             print 'All generated ' + str(len(items)) + ' elements'
+            print("--- %s seconds ---" % (time.time() - start_time))
+
 
 print "Script started"
-serv = HTTPServer(("localhost",8800), HttpProcessor)
+serv = HTTPServer(("localhost",8801), HttpProcessor)
 serv.serve_forever()
