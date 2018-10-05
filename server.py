@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #coding=utf-8
 
-from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+from http.server import BaseHTTPRequestHandler,HTTPServer
 import feedparser
 import datetime
 import PyRSS2Gen
@@ -35,7 +35,7 @@ class HttpProcessor(BaseHTTPRequestHandler):
                     guid = x.link,
                     pubDate = datetime.datetime.utcfromtimestamp(time.mktime(x.published_parsed)))
                     for x in d.entries if filter_re(filt, x.title)]
-                print name + ' generate ' + str(len(group)) + ' elements'
+                print(name + ' generate ' + str(len(group)) + ' elements')
                 items = items + group
 
             # # make the RSS2 object
@@ -46,10 +46,10 @@ class HttpProcessor(BaseHTTPRequestHandler):
                 lastBuildDate = datetime.datetime.now(),
                 items = items)
             rss.write_xml(self.wfile)
-            print 'All generated ' + str(len(items)) + ' elements'
+            print('All generated ' + str(len(items)) + ' elements')
             print("--- %s seconds ---" % (time.time() - start_time))
 
 
-print "Script started"
+print("Script started")
 serv = HTTPServer(("localhost",8800), HttpProcessor)
 serv.serve_forever()
